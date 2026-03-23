@@ -1,0 +1,116 @@
+OMNIPATH ENGINE - TECHNICAL DOCUMENTATION AND ARCHITECTURE REFERENCE
+
+This document provides deep technical insight into the OmniPath Engine, 
+the quantitative core of the ETF Portfolio Simulator. It addresses the 
+architectural conventions, stochastic models, and performance optimizations 
+that enable complex financial mathematics to execute in real-time within the browser.
+
+
+CHAPTER 1: QUANTITATIVE MODELS & FINANCIAL ENGINEERING
+
+The OmniPath Engine abstracts fundamental market dynamics into a stochastic 
+differential equation (SDE) system. In doing so, it calculates not only normal 
+distributions but also asymmetric tail risks.
+
+- MONTE CARLO SIMULATION
+  By default, the engine generates 100,000 stochastic paths (N_PATHS) per ETF. 
+  Each path simulates an independent potential future over an investment horizon 
+  of 30 years in monthly intervals (12*30=360 steps). For a portfolio 
+  consisting of 3 ETFs, this results in 108,000,000 (3*12*360*100,000) calculated nodes per run. 
+  This guarantees high statistical significance for the confidence intervals (P10 and P90).
+
+- ASYMMETRIC POISSON JUMP-DIFFUSIONS
+  To accurately reflect market shocks ("Black Swans"), the engine implements the 
+  Merton Jump-Diffusion process. Alongside continuous Brownian motion, which 
+  maps daily market volatility, there is a discrete Poisson distribution (lambda = 0.1). 
+  This statistically forces an extreme asymmetric market crash (-20% baseline drop) 
+  every 10 years. The severity of the drop is dynamically coupled to the 
+  volatility of the respective ETF (asset_jump_mu), ensuring that low-risk bond ETFs 
+  experience softer drawdowns in the simulation than volatile small caps.
+
+- EXACT ISOMETRIC DRIFT CALIBRATIONS
+  Conventional simulations incorrectly offset nominal returns (CAGR) directly with 
+  stochastic volatility, leading to massive long-term deviations of the median path 
+  ("Double Penalty"). The OmniPath Engine first converts the desired net return 
+  (CAGR minus TER) into the logarithmic, continuous differential space: 
+  'continuous_drift = Math.log(1 + cagr_net)'. Thus, the geometric anchor of the 
+  simulation is calibrated mathematically exact.
+
+- DEEP-LOOP REAL PV FISHER MECHANICS
+  When the inflation option (useInflation) is active, the engine does not merely 
+  discount the final result. Instead, every single cash flow is discounted to its 
+  Present Value (PV) at the model level according to the Fisher equation. Every 
+  defined savings plan payment stream is geometrically devalued by 2.5% per year. 
+  Consequently, the system displays the "true" purchasing power in today's money 
+  at all times, completely eliminating the illusion of money.
+
+- HIGH-ENTROPY PRNG (SFC32)
+  Standard 'Math.random()' fails at 100 million iterations due to cyclical 
+  overlaps and poor entropy. Instead, the engine natively implements an SFC32 
+  (Small Fast Counter) PRNG algorithm with a 128-bit internal state. This 
+  guarantees deterministic, absolutely reproducible, and high-quality random 
+  numbers for the Marsaglia Polar transformation without gaps in the stochastic space.
+
+- LOGNORMAL MARTINGALE COMPENSATOR
+  Since injecting Poisson jumps (drawdowns) would artificially drag the median of 
+  the simulation downward, the engine utilizes an exact linear martingale compensator 
+  (asset_jump_compensator = lambda * asset_jump_mu). This isolates and corrects the 
+  continuous drift upward to structurally defend the expected mathematical value of 
+  the P50 quantile, while fully preserving the fat lower tails (P10).
+
+- FISHER-DISCOUNTED TWR DRAWDOWNS
+  Maximum Drawdown (MDD) is not calculated using the nominal portfolio sum, as 
+  monthly deposits would visually obscure losses. Instead, a true Time-Weighted-Return 
+  (TWR) Net-Asset-Value (NAV) index is generated. If inflation is active, this path 
+  is additionally scrubbed monthly by the Real-Discount factor. The engine tracks real 
+  purchasing power drawdowns (using a High-Water-Mark algorithm) to audit genuine 
+  systematic loss risks.
+
+- MULTIVARIATE CORRELATION REGIMES
+  To visualize cluster risks across global portfolios, the engine employs Cholesky 
+  decomposition. It transforms the defined covariance matrix into a lower triangular 
+  matrix (L-Matrix). Upon triggering a Poisson shock, the engine dynamically switches 
+  from the baseline matrix to a "Crisis Matrix", where all correlations are massively 
+  pushed toward 1.0 (synchronicity). This simulates panic sell-offs, where diversification 
+  effects temporarily break apart in reality.
+
+
+CHAPTER 2: ARCHITECTURE & PERFORMANCE OPTIMIZATIONS
+
+The OmniPath Engine was designed as a zero-dependency architecture. It achieves its 
+massive computational speeds in the browser through rigorous memory and thread isolation.
+
+- ASYNCHRONOUS DISTRIBUTED MULTITHREADING
+  Instead of freezing the browser's main thread (and thus the UI), the entire 
+  quantitative kernel is offloaded into isolated Web Worker instances via a Blob stream. 
+  Multiple portfolios (Concepts) are executed independently and absolutely parallel 
+  across separate CPU cores.
+
+- O(N) RANDOMIZED QUICKSELECT
+  Extracting the P10, P50, and P90 quantiles from 100,000 paths would fundamentally 
+  require sorting the arrays. This would cause a time-consuming complexity of O(N log N). 
+  The engine uses Hoare's QuickSelect algorithm instead. Through stochastic pivot selections, 
+  the problem is solved in-place in linear time O(N). This is hundreds of times faster 
+  than conventional sorting algorithms.
+
+- ZERO-COPY IPC (MEMORY TRANSFER)
+  To optimize moving massive amounts of data between the Web Worker and the main thread, 
+  the engine avoids the extremely CPU-intensive "Structured Clone" algorithm. 
+  Instead, the Float64Arrays are injected as "Transferable Objects" [buffer]. 
+  The ownership of the memory is handed over to the UI thread in nanoseconds, 
+  without a single byte having to be copied in RAM.
+
+- MEMORY EFFICIENCY (FLOAT64ARRAYS)
+  The engine systematically foregoes conventional, dynamic JavaScript arrays ([]). 
+  Instead, strictly typed contiguous memory blocks (Float64Array) are pre-allocated. 
+  This allows the browser's V8 JIT engine to know the exact required heap allocation 
+  in advance. This prevents re-allocations and avoids devastating Garbage Collection (GC) 
+  pauses during the massive path-tracking sequences.
+
+- ISOLATED PRNG STATE SECURITY
+  To prevent race conditions in the random number generator during the parallel 
+  execution of the QuickSelect arrays, the engine isolates its entropy sources. 
+  The primary SFC32 generator strictly handles the financial engineering, while an 
+  isolated LCG generator exclusively manages the array pivot selections ("State Bleed" 
+  Prevention). This preserves the "Common Random Numbers" (CRN) mathematical structure 
+  perfectly, ensuring A/B comparisons of the portfolios remain deterministically stable.
