@@ -1,0 +1,93 @@
+UI/UX DOCUMENTATION (DEUTSCH)
+ETF PORTFOLIO SIMULATOR
+
+Dieses Dokument beschreibt die strukturelle User Interface (UI) Architektur sowie die interaktiven User Experience (UX) Pattern der Applikation.
+
+
+KAPITEL 1: USER INTERFACE (UI) & EDUCATIONAL ARCHITECTURE
+
+- EINFÜHRUNG IN DIE WELT DER ETFS
+  Das Onboarding-Element ('Was sind eigentlich ETFs?') nutzt eine leicht verständliche, pädagogische Sprache. 
+  Nutzer erfahren hier die Grundregeln des Buy & Hold Ansatzes (10 bis 15 Jahre). Die visuelle Gestaltung 
+  in einem separaten 'bg-slate-800' Container trennt diesen Lernbereich vom restlichen Rechner, um den 
+  Einsteiger nicht direkt mit Zahlen zu überfordern.
+
+- ERKLÄRUNG VON FACHBEGRIFFEN (ETF-GEHEIMSPRACHE)
+  Ein responsives CSS-Grid ordnet komplexe Fachbegriffe wie World Index, Emerging Markets, ACWI, IMI, 
+  TER und Acc. systematisch an. Subtile Farb-Akzente ('text-blue-400', 'text-emerald-400' etc.) 
+  unterstützen das visuelle Lernen und gruppieren die Begriffe kognitiv sinnvoll.
+
+- PORTFOLIO KONZEPTE
+  Die Anzeige der vier Kernstrategien (Profi-Mix, Klassiker, All-in-One, Entspannter Einstieg) wird durch die 
+  JS-Funktion `renderConcepts()` extrem dynamisch aufgebaut. Jedes Konzept wird als isolierte Card-Komponente 
+  gerendert. Im Kopfbereich dominieren statische Metriken wie Ø Rendite, Volatilität, enthaltene Firmen 
+  und Ø TER, welche automatisiert aus den JSON-Objekten entnommen und aggregiert werden ('blendedCagr', 'blendedVol').
+
+- HANDLUNGSEMPFEHLUNGEN & RISIKOWARNUNGEN
+  Pädagogische Führung entsteht durch farblich codierte Typografie. Empfehlungen leuchten grün/blau 
+  ('text-emerald-400', 'text-blue-400') und weisen auf die Zielgruppe der Strategie hin. 
+  Versteckte Systemrisiken oder Klumpenrisiken (z.B. USA-Tech Dominanz) sind signalrot ('text-rose-400') 
+  markiert und mit einem Warn-Icon versehen.
+
+- GRAPHISCHE DARSTELLUNG (CHART.JS)
+  Über die Funktion `initPieChart()` werden nahtlose Doughnut-Charts in das UI gepumpt, um die 
+  Regionale, Sektorale und Währungs-Verteilung (Allokation) abzubilden. Die Langzeit-Entwicklung 
+  wird zusätzlich als Line-Chart (Liniendiagramm) gerendert. Es zeigt das investierte Kapital (Grau), 
+  den Best-Case, Worst-Case und den stark hervorgehobenen Median des jeweiligen Portfolios. Alle Graphen 
+  sind voll-responsiv an das Browser-Fenster gebunden.
+
+- MOUSEOVER TOOLTIPS
+  Statt starrer title-Attribute nutzt das Frontend ein adaptives, CSS-getriebenes Tooltip-System basiert 
+  auf den Tailwind-Klassen 'group-hover' (für Desktop-Mäuse) und 'touch-hover' 
+  (für Mobile-Devices). Diese Logik injiziert Erklärungen zu abstrakten Metriken, indem sich 
+  schwebende Container ('absolute', 'z-50') flüssig aus dem Nichts einblenden ('opacity-100').
+
+- UNDER THE HOOD MODAL
+  Tiefgreifende mathematische Offenbarungen sind in einem modalen Overlay ('#math-modal') versteckt. 
+  Dadurch bleibt die Hauptseite extrem sauber (Progressive Disclosure). Das Modal enthält separate 
+  Kapital-Blöcke, welche detailliert die stochastischen Prozesse und Code-Hintergründe (QuickSelect, SFC32) offenlegen.
+
+
+KAPITEL 2: USER EXPERIENCE (UX) & INTERACTION FLOW
+
+- LOKALISIERUNG (DEUTSCH / ENGLISCH)
+  Die Applikation spricht fließend zwei Sprachen. Die Funktion `setLang(lang)` kümmert sich um den 
+  sofortigen Wechsel. CSS-Klassen wie '.lang-de' und '.lang-en' werden via JS ('classList.toggle') 
+  ein- oder ausgeblendet. Ein wichtiges Detail: Bei Wechsel auf Englisch (USD) werden die bestehenden 
+  Euro-Inputs von Startkapital und Sparrate live durch den aktuellen Wechselkurs umgerechnet.
+
+- DYNAMISCHE WECHSELKURSE
+  Um genaue und konsistente Visualisierungen sicherzustellen, kommuniziert die asynchrone Funktion 
+  `fetchExchangeRate()` mit der externen 'open.er-api.com'. Die Währungs-Umrechnungsrate von EUR zu USD 
+  wird im Vorfeld im Hintergrund abgerufen, womit das UI jederzeit akkurate globale Portfoliowerte lokalisieren kann.
+
+- INPUT-HANDLING (STICKY CONTROL PANEL)
+  Das zentrale Eingabefeld (Startkapital, Sparrate, Steigerung) wird von einem IntersectionObserver 
+  (Anchor: '#sticky-sentinel') überwacht. Sobald der Nutzer hinunterscrollt, rastet das Panel 
+  am oberen Bildschirmrand sicher ein ('is-sticky'). 
+  Nutzer-Tastenschläge werden von der Funktion `formatNumberInput` nach Regex-Regeln gefiltert, 
+  womit nur glatte Finanz-Strings akzeptiert werden. Darüber liegt eine smarte Timeout-Debounce-Logik 
+  (`debouncedUpdate()`), welche den schwerfälligen Berechnungs-Kernel über 1000ms puffert, um 
+  CPU-Lag während schnellem Tippen aktiv zu verhindern.
+
+- INFLATIONS-TOGGLE
+  Ein physischer Toggle-Switch ('#inflation') ermöglicht den sofortigen Wechsel zwischen nominalen Werten 
+  und realer Kaufkraft (Fisher Present-Value Diskontierung). Die Checkbox erzwingt durch ihr 
+  'change'-Event unmittelbar eine Re-Evaluation ('debouncedUpdate()'), was sämtlichen Drawdowns und 
+  Endwerten zusätzliche ökonomische Tiefe verleiht.
+
+- AUSKLAPPBARE ZUSATZINFOS (ACCORDION)
+  Die detaillierte Allokationsstruktur inkl. der Doughnut-Diagramme ist standardmäßig eingeklappt, 
+  um überfüllte UIs zu vermeiden. Der JS-Trigger `toggleDetails(id)` umschließt das Element, rotatiert 
+  das Chevron-SVG-Icon ('rotate-180') weich mittels CSS-Transitions und schickt zusätzlich ein 
+  manuelles 'resize'-Event an die Window-Node, um lästige Canvas-Stauchungen bei Chart.js zu beheben.
+
+- INSTITUTIONELLE REFERENZEN
+  Ein subtiler Dark-Mode konformer Footer bindet die Logos und URLs der vier großen Datenquellen 
+  (MSCI, BlackRock, J.P. Morgan, Vanguard) ein. Ein CSS 'hover:-translate-y-1' hebt die Icons responsiv 
+  entgegen der Maus an und untermauert das professionelle Vertrauen in die simulierten Metriken.
+
+- FACTSHEET DEEP-LINKS
+  Innerhalb der gerenderten Konzept-Boxen existiert pro ETF ein direkter Link zum zugehörigen Factsheet 
+  auf 'justetf.com'. Diese Links werden basierend auf der ISIN-Nummer und der aktiven Sprache 
+  ('justEtfLang') hochdynamisch innerhalb der Schleife in JS zusammengebaut, um manuelle Recherchen abzulösen.

@@ -1,0 +1,119 @@
+OMNIPATH ENGINE - TECHNISCHE DOKUMENTATION UND ARCHITEKTUR-REFERENZ
+
+Dieses Dokument bietet eine tiefe technische Einsicht in die OmniPath Engine, 
+den quantitativen Kern des ETF Portfolio Simulators. Es adressiert die 
+architektonischen Konventionen, stochastischen Modelle und Performance-Optimierungen, 
+die es ermöglichen, komplexe Finanzmathematik in Echtzeit im Browser auszuführen.
+
+
+KAPITEL 1: QUANTITATIVE MODELLE & FINANCIAL ENGINEERING
+
+Die OmniPath Engine abstrahiert fundamentale Marktdynamiken in ein stochastisches 
+Differentialgleichungssystem (SDE). Dabei werden nicht nur Normalverteilungen, 
+sondern auch asymmetrische Tail-Risiken berechnet.
+
+- MONTE-CARLO-SIMULATION
+  Die Engine generiert standardmäßig 100.000 stochastische Pfade (N_PATHS) pro ETF. 
+  Jeder Pfad simuliert eine voneinander unabhängige mögliche Zukunft über 
+  einen Anlagehorizont von 30 Jahren in monatlichen Intervallen 
+  (12*30=360 Schritte). Bei einem Portfolio aus 3 ETFs resultiert dies in 108.000.000 (3*12*360*100.000)
+  kalkulierten Knotenpunkten pro Lauf. Dies garantiert eine hohe statistische 
+  Signifikanz der Konfidenzintervalle (P10 und P90).
+
+- ASYMMETRIC POISSON JUMP-DIFFUSIONS
+  Um Marktschocks ("Black Swans") realitätsnah abzubilden, implementiert die Engine 
+  den Merton Jump-Diffusion Prozess. Neben der kontinuierlichen Brownschen Bewegung, 
+  die die tägliche Marktvolatilität abbildet, existiert eine diskrete Poisson-Verteilung 
+  (lambda = 0.1). Diese erzwingt statistisch alle 10 Jahre einen extremen asymmetrischen 
+  Markteinbruch (-20% Basis-Drop). Die Schwere des Einbruchs wird dynamisch an die 
+  Volatilität des jeweiligen ETFs gekoppelt (asset_jump_mu), sodass risikoarme ETFs 
+  in der Simulation sanfter fallen als volatile Small-Caps.
+
+- EXACT ISOMETRIC DRIFT CALIBRATIONS
+  Herkömmliche Simulationen verrechnen nominale Renditen (CAGR) fehlerhaft mit der 
+  stochastischen Volatilität, was langfristig zu massiven Abweichungen des Median-Pfades 
+  führt ("Double Penalty"). Die OmniPath Engine konvertiert die gewünschte Netto-Rendite 
+  (CAGR abzüglich TER) zunächst in den logarithmischen, stetigen Differentialraum: 
+  'continuous_drift = Math.log(1 + cagr_net)'. Somit ist der geometrische Anker der 
+  Simulation mathematisch exakt kalibriert.
+
+- DEEP-LOOP REAL PV FISHER MECHANICS
+  Bei Aktivierung der Inflations-Option (useInflation) wird nicht erst das Endergebnis, 
+  sondern jeder einzelne Cashflow bereits auf Modellebene nach der Fisher-Gleichung auf 
+  seinen Present Value (PV) abdiskontiert. Jeder definierte Sparplan-Zahlungsstrom wird 
+  geometrisch um 2,5 % pro Jahr entwertet. Dadurch zeigt das System zu jedem Zeitpunkt die 
+  "echte" heutige Kaufkraft an, wodurch die Geldillusion vollständig eliminiert wird.
+
+- HIGH-ENTROPY PRNG (SFC32)
+  Gewöhnliches 'Math.random()' scheitert bei 100 Millionen Iterationen an zyklischen 
+  Überlappungen und schlechter Entropie. Die Engine implementiert stattdessen nativ 
+  einen SFC32 (Small Fast Counter) PRNG-Algorithmus mit einem 128-Bit internen State. 
+  Dieser garantiert deterministische, absolut reproduzierbare und qualitativ 
+  hochwertige Zufallszahlen für die Marsaglia Polar-Transformation ohne Lücken im 
+  stochastischen Raum.
+
+- LOGNORMAL MARTINGALE COMPENSATOR
+  Da die Injektion von Poisson-Jumps (Drawdowns) den Median der Simulation künstlich 
+  nach unten ziehen würde, verwendet die Engine einen exakten linearen Martingal-Kompensator 
+  (asset_jump_compensator = lambda * asset_jump_mu). Dieser korrigiert den stetigen Drift 
+  isoliert nach oben, um den mathematischen Erwartungswert des P50-Quantils strukturell zu 
+  verteidigen, während die fetten untern Tails (P10) erhalten bleiben.
+
+- FISHER-DISCOUNTED TWR DRAWDOWNS
+  Die Berechnung des Maximum Drawdowns (MDD) erfolgt nicht über die nominale 
+  Portfolio-Summe, da monatliche Einzahlungen Verluste optisch verschleiern würden. 
+  Stattdessen wird ein echter Time-Weighted-Return (TWR) Net-Asset-Value (NAV) Index generiert. 
+  Ist die Inflation aktiv, wird dieser Pfad monatlich zusätzlich um den Real-Discount-Faktor 
+  bereinigt. Die Engine trackt reale Kaufkraft-Drawdowns (High-Water-Mark Algorithmus), um die 
+  echten systematischen Verlustrisiken zu auditieren.
+
+- MULTIVARIATE CORRELATION REGIMES
+  Um Cluster-Risiken in Welt-Portfolios zu visualisieren, nutzt die Engine die 
+  Cholesky-Zerlegung. Sie überfuehrt die definierte Kovarianzmatrix in eine untere 
+  Dreiecksmatrix (L-Matrix). Bei Auslösung eines Poisson-Schocks wechselt die Engine 
+  dynamisch von der Basis-Matrix auf eine "Crisis Matrix", bei der alle Korrelationen massiv 
+  Richtung 1.0 (Gleichlauf) extremisiert werden. Dies simuliert Panik-Verkäufe, bei denen 
+  Diversifikations-Effekte in der Realität temporär auseinanderbrechen.
+
+
+
+KAPITEL 2: ARCHITEKTUR & PERFORMANCE-OPTIMIERUNGEN
+
+Die OmniPath Engine wurde als Zero-Dependency Architektur konzipiert. Sie erreicht ihre 
+massiven Berechnungsgeschwindigkeiten im Browser durch konsequente Speicher- und 
+Thread-Isolierung.
+
+- ASYNCHRONOUS DISTRIBUTED MULTITHREADING
+  Anstatt den Main-Thread des Browsers (und damit das UI) einzufrieren, wird der gesamte 
+  quantitative Kernel über einen Blob-Stream in isolierte Web-Worker Instanzen ausgelagert. 
+  Mehrere Portfolios (Concepts) werden unabhängig und absolut parallel auf separaten 
+  CPU-Kernen ausgeführt.
+
+- O(N) RANDOMIZED QUICKSELECT
+  Um das P10, P50 und P90 Quantil aus 100.000 Pfaden zu extrahieren, wäre prinzipiell eine 
+  Sortierung der Arrays nötig. Dies würde eine zeitaufwendige Komplexität von O(N log N) 
+  verursachen. Die Engine verwendet stattdessen Hoare's QuickSelect Algorithmus. 
+  Durch stochastische Pivot-Wahlen wird das Problem in-place in linearer Zeit O(N) gelöst. 
+  Dies ist hunderte Male schneller als herkömmliche Sortieralgorithmen.
+
+- ZERO-COPY IPC (MEMORY TRANSFER)
+  Um das Verschieben von gigantischen Datenmengen zwischen dem Web-Worker und dem Main-Thread 
+  zu optimieren, vermeidet die Engine den extrem rechenintensiven "Structured Clone" Algorithmus. 
+  Stattdessen werden die Float64Arrays als "Transferable Objects" [buffer] injiziert.
+  Dabei wird das Besitzrecht (Ownership) des Speichers in Nanosekunden an den UI-Thread 
+  übergeben, ohne dass auch nur ein einziges Byte im Arbeitsspeicher kopiert werden muss.
+
+- SPEICHEREFFIZIENZ (FLOAT64ARRAYS)
+  Die Engine verzichtet konsequent auf herkömmliche, dynamische JavaScript-Arrays ([]).
+  Stattdessen werden strikt typisierte Speicherblöcke (Float64Array) pre-allokiert. 
+  Damit weiß die V8 JIT-Engine des Browsers vorab exakt, wie viel Speicher auf dem Heap benötigt 
+  wird. Dies verhindert Re-Allokationen und vermeidet verheerende Garbage-Collection-Pausen (GC) 
+  während des massiven Path-Trackings.
+
+- ISOLIERTE PRNG STATE-SICHERHEIT
+  Um Race-Conditions im Zufallsgenerator während der parallelen Ausführung des QuickSelects zu 
+  verhindern, splittet die Engine die Entropie-Quellen. Der primäre SFC32 Generator kümmert sich 
+  rein um das Financial Engineering, während ein isolierter LCG-Generator exklusiv die Pivot-Wahlen 
+  des Arrays übernimmt ("State Bleed" Prevention). Dadurch bleibt "Common Random Numbers" (CRN)
+  Struktur mathematisch perfekt erhalten, wodurch A/B Vergleiche der Portfolios deterministisch 
+  stabil bleiben.
