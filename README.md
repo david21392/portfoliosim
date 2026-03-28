@@ -1,20 +1,40 @@
-# ETF Portfolio Simulator (OmniPath Engine)
+# ETF Portfolio Simulator (OmniPath 5.0)
 
-Welcome to the **ETF Portfolio Simulator**, a high-performance, purely client-side wealth projection and stochastic risk-modeling engine designed to visualize the power of long-term compound interest using established institutional strategies.
+Welcome to the **ETF Portfolio Simulator**, a high-performance, purely client-side wealth projection and stochastic risk-modeling engine. Designed to visualize the true power of long-term compound interest, this tool bridges the gap between everyday investors and institutional-grade financial mathematics.
 
-## Key Features
+## For Beginners & Everyday Investors
+Whether you are just starting your investment journey or managing a mature portfolio, the simulator provides an intuitive, educational, and visually stunning experience:
+* **Interactive Learning:** Learn the fundamentals of "Buy & Hold" investing, the mechanics of compound interest, and the real-world impact of inflation.
+* **Pre-Built Concepts:** Choose from four balanced ETF portfolios (e.g., All-in-One, Classic 70/30) and instantly see their historical and projected performances. The geographic and capitalization distributions are permanently visible via dedicated metric bars directly inside the concept cards.
+* **100% Client-Side Privacy:** Your financial data never leaves your device. The entire application runs natively in your browser using Vanilla JS without external server communication for calculations.
+* **Dynamic Exchange Rates & Inflation:** Experience live EUR/USD tracking and toggle systemic inflation mapping to reveal your true purchasing power in the deep future.
 
-* **100% Client-Side Architecture:** Zero backend dependencies. The entire simulator runs natively in your browser using Vanilla JavaScript and Tailwind CSS, guaranteeing absolute data privacy and zero server latency.
-* **Asynchronous Deep-Loop Engine:** Powered by the mathematical **OmniPath Engine**, shifting 100,000 discrete Monte-Carlo simulations per ETF into isolated Web Worker threads. No UI freezing, no DOM stutter.
-* **Zero-Copy IPC Memory Transfer:** Massively optimized Float64Array data matrices are passed between the worker and the main UI thread via Transferable Objects, preventing severe V8 garbage collection (GC) pauses natively.
-* **Fisher-Discounted Real PV Mechanics:** Activating the inflation toggle systematically discounts every incoming monthly cash flow dynamically into Real Present Value (true purchasing power) metrics recursively.
-* **Asymmetric Jump-Diffusions (Tail Risks):** The model does not calculate naive log-normal paths; the kernel enforces severe historical market shocks via Poisson distributions while simultaneously protecting the geometrical median utilizing strict linear martingale compensators.
-* **Bilingual Localization On-The-Fly (DE/EN):** The interactive UI switches instantaneously between German and English. Underlying monetary properties systematically fetch the live EUR/USD exchange rate via external APIs ensuring dynamically accurate mathematical tracking globally.
-* **Single-File Base64 Obfuscation:** The target production output (/dist/prod/index.html) compresses the HTML, injected CSS, and core structural JS logic into a highly secured obfuscated Base64 execution payload, guarding quantitative IP bounds natively.
+## For Quantitative Analysts & Developers (OmniPath 5.0)
+Beneath the clean user interface operates the **OmniPath 5.0 Engine**, built upon a rigid Stochastic Differential Equation (SDE) foundation mathematically mirroring top-tier institutional risk frameworks.
+* **Asynchronous Deep-Loop Engine:** We bypass UI freezes by shifting 100,000 algorithmic trajectories into isolated Web Workers via Zero-Copy IPC memory pooling (`Float64Arrays`), ensuring flawless 60 FPS rendering.
+* **Contagion & Asymmetric Tail Risks:** Leveraging time-discrete self-exciting **Hawkes Processes** via Exact Exponential CDF bounds and **dynamic conditional correlations (DCC)** heavily bound by Spherical Normalizations to map realistic sequence crashes.
+* **Advanced Stochastics:** Features explicit **Heston Stochastic Volatility** with strict bivariate leverage correlations, **Lognormal Martingale Compensators**, and analytic **Ornstein-Uhlenbeck Transition constraints** anchoring exact stationary bounds.
+* **Structural Precision:** Utilizing mid-period SDE coupling (Shannon's Demon fix) alongside pure Log-additions for continuous TER extraction matrices.
+* **O(N) Randomized QuickSelect:** Extremely complex tail-risk metric slicing executes natively utilizing continuous internal baseline LCG seed isolation, retaining common random sequences natively without algorithmic degradation limits.
 
-## Development Workflow & Build Pipeline
+### Deep-Dive Technical Documentation
+To explore the underlying architectural paradigms and stochastic mathematics, please refer to our comprehensive internal documentation exclusively generated by the `UPDATE DOCS` autonomous integration pipeline:
+* [Backend & Architecture Reference (DE) - SDE Math & Engine Mechanics](docs/Backend_Documentation_DE.txt)
+* [Backend & Architecture Reference (EN) - SDE Math & Engine Mechanics](docs/Backend_Documentation_EN.txt)
+* [Frontend UI/UX Reference (DE) - State Handling & Interaction Flow](docs/Frontend_Documentation_DE.txt)
+* [Frontend UI/UX Reference (EN) - State Handling & Interaction Flow](docs/Frontend_Documentation_EN.txt)
 
-This repository is governed by robust, automated PowerShell build loops tailored for decentralized development:
-1. Run watch.ps1. It relentlessly monitors the modular /src directory (math.js, ui.js, data.js, index.html).
-2. Upon saving any physical source file, the watcher inherently triggers build.ps1 automatically.
-3. The build logic aggregates all logical modules, generating an organized, accessible /dist/dev build and a strictly protected /dist/prod payload autonomously.
+## Development Workflow & Autonomous Agent Integration
+This repository is rigorously managed via a combination of automated PowerShell pipelines and the **Anti Gravity with Gemini 3.1 Pro (High)** autonomous developer agent executing native local workflows.
+
+### System Scripts
+1. `\scripts\watch.ps1`: Monitors the modular `/src` directory for changes and invokes real-time execution bounds.
+2. `\scripts\build.ps1`: Automatically triggered aggregation pipeline mapping the source components into a readable `/dist/dev` application state and a highly protected Base64 obfuscated `/dist/prod` payload.
+3. `\scripts\backup.ps1`: Executes full system state synchronization and codebase restoration anchors transferring `/src` and `/dist` payload into `/backups`.
+
+### Autonomous AI Agent Procedures
+Triggered directly via natural language prompt commands, the local **Anti Gravity (Gemini 3.1 Pro)** agent intercepts directives to execute structural modifications natively via files dynamically injected into `.agent/workflows/`:
+* `run_code_audit.md`: (Triggered via "RUN CODE AUDIT") Invokes a Lead Quantitative Developer persona scanning the Web Workers and SDE equations for sequence degradation and mathematical flaws.
+* `run_clean_code.md`: (Triggered via "RUN CLEAN CODE") Invokes a rigid clean-code architectural pass targeting JSDoc standardization, dead-code extraction, and performance optimization profiling.
+* `update_docs.md`: (Triggered via "UPDATE DOCS") Instantly reads structural codebase deltas and regenerates all 5 System Documentation blocks (Frontend, Backend, and README) ensuring semantic alignment without static PowerShell string embedding.
+* `update_backups.md`: (Triggered via "UPDATE BACKUPS") Synchronizes the pipeline artifacts physically into the hard `/backups` filesystem without blocking User input.
