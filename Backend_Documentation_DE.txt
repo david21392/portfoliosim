@@ -1,6 +1,6 @@
-OMNIPATH ENGINE - TECHNISCHE DOKUMENTATION UND ARCHITEKTUR-REFERENZ (VERSION 5.0)
+OMNIPATH ENGINE - TECHNISCHE DOKUMENTATION UND ARCHITEKTUR-REFERENZ (VERSION 5.1)
 
-Dieses Dokument bietet eine tiefe technische Einsicht in die OmniPath Engine 5.0, 
+Dieses Dokument bietet eine tiefe technische Einsicht in die OmniPath Engine 5.1, 
 den quantitativen Kern des ETF Portfolio Simulators. Es adressiert die 
 architektonischen Konventionen, stochastischen Modelle und Performance-Optimierungen, 
 die es ermöglichen, komplexe Finanzmathematik in Echtzeit im Browser auszuführen.
